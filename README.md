@@ -2,8 +2,10 @@
 Code used to generate the results in "Incorporating animal movement into continuous-time spatial capture-recapture
 models" by Clara Panchaud, Ruth King, David Borchers, and Hannah Worthington.
 
-The folder "Functions" contains all of the functions to define both the standard continous-time SCR model and the extended memory MSCR version.
+The folder "Functions" contains all of the functions to define the Move-SCR model.
 
 The file "Simulations.R" contains the code used to produce the Simulation Study of the paper.
 
-The folder "American Martens" contains data from an American martens study, the analysis of this data set by both models and a file that plots the AC PDFs.
+The folder "Data" contains the data from the American martens study presented in the paper. 
+
+The folder "American Martens" contains the analysis of the American Martens data. 
