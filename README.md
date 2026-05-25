@@ -8,4 +8,4 @@ The file "Simulations.R" contains the code used to produce the Simulation Study 
 
 The folder "Data" contains the data from the American martens study presented in the paper. 
 
-The folder "American Martens" contains the analysis of the American Martens data. 
+The folder "Case Study" contains the analysis of the American Martens data. 
