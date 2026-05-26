@@ -38,7 +38,6 @@ n_traps<- 30
 # Define the number of states
 S <- 100 
 
-
 mesh_spacing <- 1
 
 # Create the mesh as a 10x10 grid of 100 square cells at a distance 1km from each other 
@@ -117,14 +116,14 @@ N <- 20
 
 # Initialise results data frame
 col_names <- c(
-   "sim_id", "alpha_true", "beta_true", "lambda_true", "N_true", "Time", "S", "n_ac",
-   "n_obs", "n_events",
-  "lambda_hat", "alpha_hat", "beta_hat",
-   "se_lambda", "se_alpha", "se_beta", "N_hat", "SE_N",
-  "lambda_hat_ac", "alpha_hat_ac", "beta_hat_ac",
-  "se_lambda_ac", "se_alpha_ac", "se_beta_ac", "N_hat_ac", "SE_N_ac",
+  "sim_id", "sigmasq_true", "alpha_true", "lambda_true", "N_true", "Time", "S", "n_ac",
+  "n_obs", "n_events",
+  "lambda_hat", "sigmasq_hat",
+  "se_lambda", "se_sigmasq", "N_hat", "SE_N",
+  "lambda_hat_ac", "sigmasq_hat_ac", "alpha_hat_ac",
+  "se_lambda_ac", "se_sigmasq_ac", "se_alpha_ac", "N_hat_ac", "SE_N_ac",
   "h0", "sigma_sq", "se_h0", "se_sigma_sq", "N_SCR", "SE_N_SCR",
-    "elapsed_sec", "elapsed_sec_ac", "elapsed_sec_SCR")
+  "elapsed_sec", "elapsed_sec_ac", "elapsed_sec_SCR")
 results <- as.data.frame(matrix(NA, nrow = n_sim, ncol = length(col_names)))
 colnames(results) <- col_names
 
@@ -137,9 +136,9 @@ for (j in 1:n_sim) {
   cat("\n========================================\n")
   cat("Starting simulation", j, "of", n_sim, "\n")
   cat("========================================\n")
-
+  
   set.seed(j+200)
-    
+  
   #Sample the trap locations
   traps_on<-sort(sample( inner_states, size=n_traps))
   trap <- mesh[traps_on,]
@@ -162,7 +161,7 @@ for (j in 1:n_sim) {
   Q_list<-pre_data[[1]]
   pi_list<-pre_data[[2]]
   s0<-pre_data[[3]]
-
+  
   
   # Simulate continuous-time Markov chain (movement paths)
   obj <- sim_CTMC_ac(Q_list,Time,s0,S,N)
@@ -170,9 +169,9 @@ for (j in 1:n_sim) {
   # Simulate detections using Markov-modulated Poisson process
   mmpp <- sim_MMPP(obj, lambda)
   
- # plot_trajectory(obj, 4, mesh, trap)
-    
-    
+  # plot_trajectory(obj, 4, mesh, trap)
+  
+  
   # Filter to observed individuals only (those with at least one detection)
   observed_idx <- which(!vapply(mmpp$tt, is.null, logical(1)))
   
@@ -189,7 +188,7 @@ for (j in 1:n_sim) {
   cat("  Observed individuals:", observed_ind, "\n")
   cat("  Total detections:", total_detections, "\n")
   
-
+  
   
   ############## FIT WITH UMOVE FIRST ############
   ################################################
@@ -248,7 +247,7 @@ for (j in 1:n_sim) {
   
   # Create autodiff function
   obj_umove <- MakeADFun(data = tmbdata, parameters = list(theta = theta_init), 
-                   DLL = "like_MMPP")
+                         DLL = "like_MMPP")
   
   # Perform optimization (suppress output)
   invisible(capture.output({
@@ -268,16 +267,16 @@ for (j in 1:n_sim) {
   
   # Calculate population size estimate with confidence interval
   Pop_size_umove <- confint_pop_mmmpp(fit_umove$par, Time, mesh_spacing, observed_ind, S, neighbour, 
-                                traps_on, f, report_umove$cov)
+                                      traps_on, f, report_umove$cov)
   
   
   cat("  UMOVE N estimate:", Pop_size_umove[1], "± SE:", Pop_size_umove[2], "\n")
   cat("  UMOVE elapsed time:", round(elapsed_umove, 2), "seconds\n")
-
+  
   ##################################### FIT WITH OU MODEL #####################################
   #############################################################################################
- 
-   cat("\n--- Fitting OU (activity center) model ---\n")
+  
+  cat("\n--- Fitting OU (activity center) model ---\n")
   
   
   tmbdata_ou <- list(
@@ -322,12 +321,12 @@ for (j in 1:n_sim) {
   # Record end time
   end_ou <- Sys.time()
   elapsed_ou <- as.numeric(difftime(end_ou, start_ou, units = "secs"))
-
-
+  
+  
   Pop_size_ac <- confint_pop_mmmpp_ac(fit_ou$par, Time, mesh, mesh_spacing, as.matrix(mesh_ac_fit), observed_ind, S, neighbour,
                                       traps_on, report_ou$cov, n_ac)
-
-
+  
+  
   cat("  OU N estimate:", Pop_size_ac[1], "± SE:", Pop_size_ac[2], "\n")
   cat("  OU elapsed time:", round(elapsed_ou, 2), "seconds\n")
   
@@ -341,7 +340,7 @@ for (j in 1:n_sim) {
   cams<-mesh[traps_on,]
   mesh_fit = make.mask(cams,buffer=2,type="traprect",spacing=0.5)
   
-
+  
   new_format <- mmpp_to_df(mmpp,traps_on,Time,r2, mesh)
   ddfmat_sim <- new_format[[1]]
   dfrows_sim <- new_format[[2]]
@@ -359,16 +358,16 @@ for (j in 1:n_sim) {
   SE_SCR <- sqrt(diag(solve(fit_nomem$hessian)))
   
   elapsed_SCR <- as.numeric(difftime(end_time_SCR, start_time_SCR, units="secs"))
-
+  
   cat("  SCR N estimate:", as.numeric(N_est_SCR[1]), "± SE:", as.numeric(N_est_SCR[2]), "\n")
   cat("  SCR elapsed time:", round(as.numeric(elapsed_SCR), 2), "seconds\n")
   
-
+  
   # Store results --------------------------------------------------------------
   
   results[j, "sim_id"] <- j
-  results[j, "alpha_true"] <- sigma_sq
-  results[j, "beta_true"] <- alpha
+  results[j, "sigmasq_true"] <- sigma_sq
+  results[j, "alpha_true"] <- alpha
   results[j, "lambda_true"] <- l
   results[j, "N_true"] <- N
   results[j, "Time"] <- Time
@@ -378,22 +377,22 @@ for (j in 1:n_sim) {
   results[j, "n_events"] <- total_detections
   
   
-
+  
   # UMOVE results
   results[j, "lambda_hat"] <- param_umove[3, 1]
-  results[j, "alpha_hat"] <- param_umove[4, 1]
+  results[j, "sigmasq_hat"] <- param_umove[4, 1]
   results[j, "se_lambda"] <- param_umove[3, 2]
-  results[j, "se_alpha"] <- param_umove[4, 2]
+  results[j, "se_sigmasq"] <- param_umove[4, 2]
   results[j, "N_hat"] <- Pop_size_umove[1]
   results[j, "SE_N"] <- Pop_size_umove[2]
   results[j, "elapsed_sec"] <- elapsed_umove
   
   # OU results
-  results[j, "alpha_hat_ac"] <- param_ou[4, 1]
-  results[j, "beta_hat_ac"] <- param_ou[5, 1]
+  results[j, "sigmasq_hat_ac"] <- param_ou[4, 1]
+  results[j, "alpha_hat_ac"] <- param_ou[5, 1]
   results[j, "lambda_hat_ac"] <- param_ou[6, 1]
-  results[j, "se_alpha_ac"] <- param_ou[4, 2]
-  results[j, "se_beta_ac"] <- param_ou[5, 2]
+  results[j, "se_sigmasq_ac"] <- param_ou[4, 2]
+  results[j, "se_alpha_ac"] <- param_ou[5, 2]
   results[j, "se_lambda_ac"] <- param_ou[6, 2]
   results[j, "N_hat_ac"] <- Pop_size_ac[1]
   results[j, "SE_N_ac"] <- Pop_size_ac[2]
@@ -412,7 +411,7 @@ for (j in 1:n_sim) {
   results
   cat("\nSimulation", j, "complete!\n")
 }
-  
+
 
 # Print summary of results -----------------------------------------------------
 cat("\n========================================\n")
